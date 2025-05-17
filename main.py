@@ -6,16 +6,20 @@ from icecream import ic
 
 
 class Card:
-    def __init__(self, score: int, value: Optional[str] = '', type_: Optional[Literal['number', 'bonus', 'effect']] = None):
+    def __init__(self,
+                 score: int,
+                 value: Optional[str] = '',
+                 type_: Optional[Literal['number', 'bonus', 'effect']] = None
+                 ):
         self.score = score or 0
         self.value = value
         self.type = type_ or 'number'
 
     def __repr__(self):
-        return f"val:{self.value}-type:{self.type}-score:{self.score}"
+        return f"{self.value}({self.type})"
 
     def __str__(self):
-        return f"val:{self.value}-type:{self.type}"
+        return f"{self.value}({self.type})"
 
 
 class Deck:
@@ -29,12 +33,13 @@ class Deck:
 
         for type_, list_ in deck_build_list.items():
             if type_ == "numbers":
-                self.cards.extend([Card(i) for i in list_ for _ in range(i or 1)])
+                self.cards.extend([Card(i, str(i)) for i in list_ for _ in range(i or 1)])
             elif type_ == "bonus":
-                self.cards.extend([Card(0, str(i), 'bonus') for i in list_])
+                self.cards.extend([Card(i, str(i), 'bonus') for i in list_])
                 self.cards.append(Card(0, '*2', 'bonus'))
             elif type_ == "effect":
                 self.cards.extend([Card(0, 'stuff', 'effect') for i in list_ for _ in range(i)])
+        self.shuffle()
 
     def __repr__(self):
         return f"{[str(card) for card in self.cards]}"
@@ -74,6 +79,7 @@ class Player:
     def update_total_score(self):
         """Met à jour le score total avec le score du tour."""
         self.total_score += self.turn_score
+        print(f"score de {self.turn} = {self.total_score}")
         self.turn_score = 0  # Réinitialise le score du tour
 
     def clear_hand(self):
@@ -93,16 +99,17 @@ class Player:
         """Marque le joueur comme sorti pour cette manche."""
         self.is_out = True
 
+
 class GameEngine:
     def __init__(self, players: List[Player]):
         self.players = players
         self.deck = Deck()
         self.current_player_index = 0
         self.game_over = False
+        self.dealer = players[0]
 
     def init_round(self):
         """Initialise le jeu en distribuant les cartes aux joueurs."""
-        self.deck.shuffle()
         for player in self.players:
             card = self.deck.draw_card()
             if card:
@@ -133,13 +140,16 @@ class GameEngine:
             player.is_out = False
 
         self.check_game_over()
+
         if not self.game_over:
+            dealer_index = self.players.index(self.dealer)
+            self.dealer = self.players[(dealer_index + 1) % len(self.players)]
             self.init_round()
 
     def play_turn(self):
         """Joue un tour pour le joueur actuel."""
         current_player = self.players[self.current_player_index]
-        print(f"Tour du joueur {current_player.turn}")
+        print(f"Tour du joueur {current_player.turn} - {current_player.hand}")
 
         # C'est ici qu'il faudra intégrer toute l'intelligence du moteur :
         # tirer une carte si les chances de break sont acceptables
@@ -150,17 +160,27 @@ class GameEngine:
 
         # règle des flip 7 : fin de la manche pour tout le monde
 
-        card_drawn = self.deck.draw_card()
+        # Demande au joueur si l'on joue
+        play = input("Piocher ? (Y/n)")
+        card_drawn = None
+        if play.lower() != 'n':
+            card_drawn = self.deck.draw_card()
+        if play.lower() == 'q':
+            exit()
+
         if card_drawn:
-            print(f"le joueur {current_player} a tiré la carte {card_drawn}")
+            print(f"le joueur {current_player.turn} a tiré la carte {card_drawn}")
 
             if current_player.check_duplicate(card_drawn.value):
-                print(f"Joueur {current_player} a déjà une carte de valeur {card_drawn.value}. "
+                print(f"Joueur {current_player.turn} a déjà une carte de valeur {card_drawn.value}. "
                       f"Son tour s'arrête et il marque 0 point pour cette manche.")
+                current_player.fold()
                 current_player.turn_score = 0
             else:
                 current_player.add_card_to_hand(card_drawn)
                 current_player.calculate_turn_score()
+        else:
+            current_player.fold()
 
         # Passer au joueur suivant
         self.next_active_player()
@@ -182,12 +202,10 @@ class GameEngine:
         self.init_round()
         while not self.game_over:
             self.play_turn()
-            self.check_game_over()
 
 
-print('Hello g4m€rZ')
-d = Deck()
-print(d)
+player_1 = Player(1)
+player_2 = Player(2)
+partie = GameEngine([player_1, player_2])
 
-
-# %%
+partie.run_game()
