@@ -61,6 +61,7 @@ class Player:
         self.turn: int = turn       # Position du joueur / ID
         self.total_score: int = 0   # Score total de la partie
         self.turn_score: int = 0    # Score marqué à la fin du tour
+        self.is_out: bool = False   # Flag qui détermine si un joueur est out pour la manche
 
     def add_card_to_hand(self, card: Card):
         """Ajoute une carte à la main du joueur."""
@@ -88,6 +89,9 @@ class Player:
         return (f"Player(turn={self.turn}, total_score={self.total_score}, "
                 f"turn_score={self.turn_score}, hand={self.hand})")
 
+    def fold(self):
+        """Marque le joueur comme sorti pour cette manche."""
+        self.is_out = True
 
 class GameEngine:
     def __init__(self, players: List[Player]):
@@ -96,7 +100,7 @@ class GameEngine:
         self.current_player_index = 0
         self.game_over = False
 
-    def initialize_game(self):
+    def init_round(self):
         """Initialise le jeu en distribuant les cartes aux joueurs."""
         self.deck.shuffle()
         for player in self.players:
@@ -105,9 +109,32 @@ class GameEngine:
                 player.add_card_to_hand(card)
             # TODO: gérer le draw d'une carte à effet -> draw3 ou stop
 
-    def next_turn(self):
-        """Passe au tour du joueur suivant."""
-        self.current_player_index = (self.current_player_index + 1) % len(self.players)
+    def next_active_player(self):
+        """Passe au joueur actif suivant."""
+        next_index = (self.current_player_index + 1) % len(self.players)
+        while next_index != self.current_player_index:
+            if not self.players[next_index].is_out:
+                self.current_player_index = next_index
+                return
+            next_index = (next_index + 1) % len(self.players)
+        # Si aucun joueur n'est actif, fin de la manche
+        self.end_round()
+
+    def all_players_out(self):
+        """Vérifie si tous les joueurs sont couchés."""
+        return all(player.is_out for player in self.players)
+
+    def end_round(self):
+        """Termine la manche et met à jour les scores."""
+        print("Fin de la manche, mise à jour des scores.")
+        for player in self.players:
+            player.update_total_score()
+            player.clear_hand()
+            player.is_out = False
+
+        self.check_game_over()
+        if not self.game_over:
+            self.init_round()
 
     def play_turn(self):
         """Joue un tour pour le joueur actuel."""
@@ -136,7 +163,7 @@ class GameEngine:
                 current_player.calculate_turn_score()
 
         # Passer au joueur suivant
-        self.next_turn()
+        self.next_active_player()
 
     def check_game_over(self):
         """Vérifie si le jeu est terminé."""
@@ -152,16 +179,10 @@ class GameEngine:
 
     def run_game(self):
         """Exécute la boucle principale du jeu."""
-        self.initialize_game()
+        self.init_round()
         while not self.game_over:
             self.play_turn()
             self.check_game_over()
-
-
-# Exemple d'utilisation
-players_ = [Player(turn=i) for i in range(2)]  # Créer 2 joueurs
-game_engine = GameEngine(players_)
-game_engine.run_game()
 
 
 print('Hello g4m€rZ')
