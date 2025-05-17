@@ -41,6 +41,19 @@ class Deck:
     def shuffle(self):
         rng.shuffle(self.cards)
 
+    def draw_card(self):
+        if self.cards:
+            return self.cards.pop()
+        else:
+            return None
+            # TODO: _rebuild_deck(self) # -> créer Discard
+
+    def stats(self):
+        distinct_cards = set(c.value for c in self.cards)
+        for unique_card in distinct_cards:
+            count = self.cards.count(__value=unique_card)
+            print(unique_card, count)
+
 
 class Player:
     def __init__(self, turn: int):
@@ -69,6 +82,78 @@ class Player:
     def __repr__(self):
         return (f"Player(turn={self.turn}, total_score={self.total_score}, "
                 f"turn_score={self.turn_score}, hand={self.hand})")
+
+
+class GameEngine:
+    def __init__(self, players: List[Player]):
+        self.players = players
+        self.deck = Deck()
+        self.current_player_index = 0
+        self.game_over = False
+
+    def initialize_game(self):
+        """Initialise le jeu en distribuant les cartes aux joueurs."""
+        self.deck.shuffle()
+        for player in self.players:
+            card = self.deck.draw_card()
+            if card:
+                player.add_card_to_hand(card)
+            # TODO: gérer le draw d'une carte à effet -> draw3 ou stop
+
+    def next_turn(self):
+        """Passe au tour du joueur suivant."""
+        self.current_player_index = (self.current_player_index + 1) % len(self.players)
+
+    def play_turn(self):
+        """Joue un tour pour le joueur actuel."""
+        current_player = self.players[self.current_player_index]
+        print(f"Tour du joueur {current_player.turn}")
+
+        # C'est ici qu'il faudra intégrer toute l'intelligence du moteur :
+        # tirer une carte si les chances de break sont acceptables
+        # choisir à qui attribuer un stop ou un draw 3
+
+        # Action de base : draw une carte
+        # check doublon : break (sauf si second_chance)
+
+        # règle des flip 7 : fin de la manche pour tout le monde
+
+        # Exemple d'action : jouer une carte
+        if current_player.hand:
+            card_played = current_player.hand.pop(0)
+            print(f"Joueur {current_player.turn} joue la carte : {card_played}")
+
+            # Mettre à jour le score du tour
+            current_player.calculate_turn_score()
+            print(f"Score du tour pour le joueur {current_player.turn} : {current_player.turn_score}")
+
+        # Passer au joueur suivant
+        self.next_turn()
+
+    def check_game_over(self):
+        """Vérifie si le jeu est terminé."""
+        # Si un seul des joueurs a au moins 200 points, c'est la fin de game
+        if any(p.total_score >= 200 for p in self.players):
+            self.game_over = True
+            self.determine_winner()
+
+    def determine_winner(self):
+        """Détermine le gagnant du jeu."""
+        winner = max(self.players, key=lambda player: player.total_score)
+        print(f"Le gagnant est le joueur {winner.turn} avec un score de {winner.total_score}")
+
+    def run_game(self):
+        """Exécute la boucle principale du jeu."""
+        self.initialize_game()
+        while not self.game_over:
+            self.play_turn()
+            self.check_game_over()
+
+
+# Exemple d'utilisation
+players_ = [Player(turn=i) for i in range(2)]  # Créer 2 joueurs
+game_engine = GameEngine(players_)
+game_engine.run_game()
 
 
 print('Hello g4m€rZ')
