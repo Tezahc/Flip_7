@@ -1,5 +1,6 @@
 # %%
 import random as rng
+import pandas as pd
 from typing import Optional, Literal, List
 from icecream import ic
 
@@ -49,10 +50,9 @@ class Deck:
             # TODO: _rebuild_deck(self) # -> créer Discard
 
     def stats(self):
-        distinct_cards = set(c.value for c in self.cards)
-        for unique_card in distinct_cards:
-            count = self.cards.count(__value=unique_card)
-            print(unique_card, count)
+        df = pd.DataFrame([{'value': card.value, 'score': card.score, 'type': card.type} for card in self.cards])
+
+        return df.value.value_counts().reset_index()
 
 
 class Player:
@@ -78,6 +78,11 @@ class Player:
     def clear_hand(self):
         """Vide la main du joueur à la fin du tour."""
         self.hand = []
+
+    def check_duplicate(self, value):
+        """Vérifie si le joueur a déjà une carte en main."""
+        # TODO, pour la carte à effet 2e chance, ajouter un argument 'type' ou quoi qui checkera si le joueur a déjà cette carte
+        return any(card.value == value for card in self.hand)
 
     def __repr__(self):
         return (f"Player(turn={self.turn}, total_score={self.total_score}, "
@@ -118,14 +123,17 @@ class GameEngine:
 
         # règle des flip 7 : fin de la manche pour tout le monde
 
-        # Exemple d'action : jouer une carte
-        if current_player.hand:
-            card_played = current_player.hand.pop(0)
-            print(f"Joueur {current_player.turn} joue la carte : {card_played}")
+        card_drawn = self.deck.draw_card()
+        if card_drawn:
+            print(f"le joueur {current_player} a tiré la carte {card_drawn}")
 
-            # Mettre à jour le score du tour
-            current_player.calculate_turn_score()
-            print(f"Score du tour pour le joueur {current_player.turn} : {current_player.turn_score}")
+            if current_player.check_duplicate(card_drawn.value):
+                print(f"Joueur {current_player} a déjà une carte de valeur {card_drawn.value}. "
+                      f"Son tour s'arrête et il marque 0 point pour cette manche.")
+                current_player.turn_score = 0
+            else:
+                current_player.add_card_to_hand(card_drawn)
+                current_player.calculate_turn_score()
 
         # Passer au joueur suivant
         self.next_turn()
