@@ -25,6 +25,8 @@ class Card:
 class Deck:
     def __init__(self):
         self.cards = []
+        self.discard = Discard()
+
         deck_build_list = {
             "numbers" : list(range(13)),
             "bonus" : list(range(2, 11, 2)),
@@ -48,11 +50,9 @@ class Deck:
         rng.shuffle(self.cards)
 
     def draw_card(self):
-        if self.cards:
-            return self.cards.pop()
-        else:
-            return None
-            # TODO: _rebuild_deck(self) # -> créer Discard
+        if not self.cards:
+            self.discard.shuffle_back_into_deck(self)
+        return self.cards.pop()
 
     def stats(self):
         df = pd.DataFrame([{'value': card.value, 'score': card.score, 'type': card.type} for card in self.cards])
@@ -60,12 +60,27 @@ class Deck:
         return df.value.value_counts().reset_index()
 
 
+class Discard:
+    def __init__(self):
+        self.cards: List[Card] = []
+
+    def discard_card(self, card):
+        """Défausse une carte"""
+        self.cards.append(card)
+
+    def shuffle_back_into_deck(self, deck: Deck):
+        """Mélange les cartes défaussées dans la pioche"""
+        deck.cards.extend(self.cards)
+        deck.shuffle()
+        self.cards = []
+
+
 class Player:
     def __init__(self, turn: int):
-        self.hand: List[Card] = []  # Les cartes qu'il a en main cette manche
+        self.hand: List[Card] = []  # Les cartes que le joueur a en main cette manche
         self.turn: int = turn       # Position du joueur / ID
-        self.total_score: int = 0   # Score total de la partie
-        self.turn_score: int = 0    # Score marqué à la fin du tour
+        self.total_score: int = 0   # Score total pour la partie
+        self.turn_score: int = 0    # Score marqué en fin de manche
         self.is_out: bool = False   # Flag qui détermine si un joueur est out pour la manche
 
     def add_card_to_hand(self, card: Card):
@@ -163,10 +178,10 @@ class GameEngine:
         # Demande au joueur si l'on joue
         play = input("Piocher ? (Y/n)")
         card_drawn = None
-        if play.lower() != 'n':
-            card_drawn = self.deck.draw_card()
         if play.lower() == 'q':
             exit()
+        elif play.lower() != 'n':
+            card_drawn = self.deck.draw_card()
 
         if card_drawn:
             print(f"le joueur {current_player.turn} a tiré la carte {card_drawn}")
