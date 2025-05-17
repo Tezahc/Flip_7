@@ -101,10 +101,10 @@ class Player:
         """Vide la main du joueur à la fin du tour."""
         self.hand = []
 
-    def check_duplicate(self, value):
+    def check_duplicate(self, drawn_card: Card):
         """Vérifie si le joueur a déjà une carte en main."""
         # TODO, pour la carte à effet 2e chance, ajouter un argument 'type' ou quoi qui checkera si le joueur a déjà cette carte
-        return any(card.value == value for card in self.hand)
+        return any(card.value == drawn_card.value and drawn_card.type == 'number' for card in self.hand)
 
     def __repr__(self):
         return (f"Player(turn={self.turn}, total_score={self.total_score}, "
@@ -186,7 +186,7 @@ class GameEngine:
         if card_drawn:
             print(f"le joueur {current_player.turn} a tiré la carte {card_drawn}")
 
-            if current_player.check_duplicate(card_drawn.value):
+            if current_player.check_duplicate(card_drawn):
                 print(f"Joueur {current_player.turn} a déjà une carte de valeur {card_drawn.value}. "
                       f"Son tour s'arrête et il marque 0 point pour cette manche.")
                 current_player.fold()
