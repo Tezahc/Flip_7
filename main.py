@@ -1,6 +1,6 @@
 # %%
 import random as rng
-from typing import Optional, Literal
+from typing import Optional, Literal, List
 from icecream import ic
 
 
@@ -40,6 +40,35 @@ class Deck:
 
     def shuffle(self):
         rng.shuffle(self.cards)
+
+
+class Player:
+    def __init__(self, turn: int):
+        self.hand: List[Card] = []  # Les cartes qu'il a en main cette manche
+        self.turn: int = turn       # Position du joueur / ID
+        self.total_score: int = 0   # Score total de la partie
+        self.turn_score: int = 0    # Score marqué à la fin du tour
+
+    def add_card_to_hand(self, card: Card):
+        """Ajoute une carte à la main du joueur."""
+        self.hand.append(card)
+
+    def calculate_turn_score(self):
+        """Calcule le score du tour en fonction des cartes en main."""
+        self.turn_score = sum(card.score for card in self.hand)
+
+    def update_total_score(self):
+        """Met à jour le score total avec le score du tour."""
+        self.total_score += self.turn_score
+        self.turn_score = 0  # Réinitialise le score du tour
+
+    def clear_hand(self):
+        """Vide la main du joueur à la fin du tour."""
+        self.hand = []
+
+    def __repr__(self):
+        return (f"Player(turn={self.turn}, total_score={self.total_score}, "
+                f"turn_score={self.turn_score}, hand={self.hand})")
 
 
 print('Hello g4m€rZ')
