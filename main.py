@@ -27,10 +27,11 @@ class Deck:
         self.cards = []
         self.discard = Discard()
 
+        # Logique de construction de la pioche
         deck_build_list = {
-            "numbers" : list(range(13)),
-            "bonus" : list(range(2, 11, 2)),
-            "effect" : [3]*3
+            "numbers": list(range(13)),  # une liste des cartes de 0 à 12 à copier en autant d'exemplaires que leur numéro
+            "bonus": list(range(2, 11, 2)),  # les bonus classiques de 2 en 2 jusqu'à 10 (le x2 est ajouté manuellement)
+            "effect": [3] * 3  # liste de 3 éléments = à 3 pour les 3 cartes à effet de chaque
         }
 
         for type_, list_ in deck_build_list.items():
@@ -41,6 +42,8 @@ class Deck:
                 self.cards.append(Card(0, '*2', 'bonus'))
             elif type_ == "effect":
                 self.cards.extend([Card(0, 'stuff', 'effect') for i in list_ for _ in range(i)])
+
+        # mélange de la pioche
         self.shuffle()
 
     def __repr__(self):
@@ -51,6 +54,7 @@ class Deck:
 
     def draw_card(self):
         if not self.cards:
+            # Si la pioche est épuisée, on reconstitue celle-ci à partir de la défausse
             self.discard.shuffle_back_into_deck(self)
         return self.cards.pop()
 
@@ -89,7 +93,14 @@ class Player:
 
     def calculate_turn_score(self):
         """Calcule le score du tour en fonction des cartes en main."""
-        self.turn_score = sum(card.score for card in self.hand)
+        # Calculer la somme préliminaire des scores des cartes
+        preliminary_score = sum(card.score for card in self.hand)
+
+        # Déterminer le facteur multiplicateur (carte bonus x2)
+        multiplier = 2 if any(card.value == '*2' for card in self.hand) else 1
+
+        # Appliquer le facteur multiplicateur
+        self.turn_score = preliminary_score * multiplier
 
     def update_total_score(self):
         """Met à jour le score total avec le score du tour."""
@@ -141,6 +152,8 @@ class GameEngine:
             next_index = (next_index + 1) % len(self.players)
         # Si aucun joueur n'est actif, fin de la manche
         self.end_round()
+        # FIXME: le tour doit continuer tant que tout le monde n'est pas couché.
+        # Actuellement la manche s'arrête si on revient au même joueur
 
     def all_players_out(self):
         """Vérifie si tous les joueurs sont couchés."""
@@ -151,6 +164,8 @@ class GameEngine:
         print("Fin de la manche, mise à jour des scores.")
         for player in self.players:
             player.update_total_score()
+            for card in player.hand:
+                self.deck.discard.discard_card(card)
             player.clear_hand()
             player.is_out = False
 
@@ -212,15 +227,14 @@ class GameEngine:
         winner = max(self.players, key=lambda player: player.total_score)
         print(f"Le gagnant est le joueur {winner.turn} avec un score de {winner.total_score}")
 
-    def run_game(self):
+    def start_game(self):
         """Exécute la boucle principale du jeu."""
         self.init_round()
         while not self.game_over:
             self.play_turn()
 
 
-player_1 = Player(1)
-player_2 = Player(2)
-partie = GameEngine([player_1, player_2])
+nb_players = 4
+partie = GameEngine([Player(i) for i in range(nb_players)])
 
-partie.run_game()
+partie.start_game()
